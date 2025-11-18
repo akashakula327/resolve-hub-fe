@@ -4,9 +4,7 @@ const AuthContext = createContext(undefined);
 
 // Mock users for demonstration
 const mockUsers = [
-  { id: '1', email: 'akashakula327@gmail.com', password: 'Akash@123', name: 'Admin User', role: 'admin' },
-  { id: '2', email: 'officer@cms.gov', password: 'officer123', name: 'Officer Smith', role: 'officer' },
-  { id: '3', email: 'citizen@example.com', password: 'citizen123', name: 'John Doe', role: 'citizen' },
+  
 ];
 
 export const AuthProvider = ({ children }) => {
@@ -60,6 +58,8 @@ const login = async (email, password) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('cms_user');
+    localStorage.removeItem('cms_token');
+    setUser(null);
   };
 
 const register = async (name, email, password) => {

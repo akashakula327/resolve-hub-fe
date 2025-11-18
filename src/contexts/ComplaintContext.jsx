@@ -40,6 +40,7 @@ export const ComplaintProvider = ({ children }) => {
 
   // ✅ Add complaint (API)
   const addComplaint = async (complaintData) => {
+    console.log(complaintData);
     try {
       const res = await fetch("http://localhost:3000/complaints/submit", {
         method: "POST",

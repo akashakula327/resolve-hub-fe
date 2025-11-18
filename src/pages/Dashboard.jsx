@@ -108,7 +108,7 @@ console.log("COMPLAINTS:", complaints);
             </Typography>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-              {userComplaints.slice(0, 5).map(complaint => (
+              {userComplaints.map(complaint => (
                 <Box
                   key={complaint.id}
                   sx={{
