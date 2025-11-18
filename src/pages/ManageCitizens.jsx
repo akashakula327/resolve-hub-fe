@@ -1,5 +1,5 @@
-import { DashboardLayout } from '@/components/DashboardLayout';
-import { useComplaints } from '@/contexts/ComplaintContext';
+import { DashboardLayout } from '../components/DashboardLayout';
+import { useComplaints } from '../contexts/ComplaintContext';
 import {
   Box,
   Grid,

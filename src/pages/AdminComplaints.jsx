@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useComplaints } from '@/contexts/ComplaintContext';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import { useComplaints } from '../contexts/ComplaintContext';
+import { DashboardLayout } from '../components/DashboardLayout';
 import {
   Box,
   Card,
@@ -18,7 +18,7 @@ import {
   Snackbar,
 } from '@mui/material';
 import { Search, Filter, Delete, PersonAdd } from '@mui/icons-material';
-import { StatusBadge } from '@/components/StatusBadge';
+import { StatusBadge } from '../components/StatusBadge';
 
 const AdminComplaints = () => {
   const { complaints, officers, deleteComplaint, updateComplaintStatus, assignOfficer } = useComplaints();

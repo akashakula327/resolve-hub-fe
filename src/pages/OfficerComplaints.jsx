@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useComplaints } from '@/contexts/ComplaintContext';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import { useAuth } from '../contexts/AuthContext';
+import { useComplaints } from '../contexts/ComplaintContext';
+import { DashboardLayout } from '../components/DashboardLayout';
 import {
   Box,
   Card,
@@ -18,7 +18,7 @@ import {
   Snackbar,
 } from '@mui/material';
 import { Description, LocationOn, CalendarToday } from '@mui/icons-material';
-import { StatusBadge } from '@/components/StatusBadge';
+import { StatusBadge } from '../components/StatusBadge';
 
 const OfficerComplaints = () => {
   const { user } = useAuth();

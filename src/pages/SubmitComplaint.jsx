@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useComplaints } from '@/contexts/ComplaintContext';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import { useAuth } from '../contexts/AuthContext';
+import { useComplaints } from '../contexts/ComplaintContext';
+import { DashboardLayout } from '../components/DashboardLayout';
 import {
   Box,
   Container,

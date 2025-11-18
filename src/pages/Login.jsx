@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Box,
   Container,
@@ -12,7 +12,7 @@ import {
   Snackbar,
 } from '@mui/material';
 import { Shield, ArrowForward } from '@mui/icons-material';
-import { Navbar } from '@/components/Navbar';
+import { Navbar } from '../components/Navbar';
 
 const Login = () => {
   const [email, setEmail] = useState('');

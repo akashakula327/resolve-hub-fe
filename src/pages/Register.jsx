@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Box,
   Container,
@@ -9,9 +9,10 @@ import {
   Button,
   Typography,
   Snackbar,
+  Alert,
 } from '@mui/material';
 import { Shield, ArrowBack } from '@mui/icons-material';
-import { Navbar } from '@/components/Navbar';
+import { Navbar } from '../components/Navbar';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -19,36 +20,64 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (password !== confirmPassword) {
-      setSnackbar({ open: true, message: 'Passwords do not match', severity: 'error' });
-      return;
-    }
+  // Validate Gmail
+  if (!email.endsWith('@gmail.com')) {
+    setSnackbar({
+      open: true,
+      message: 'Only @gmail.com email addresses are allowed',
+      severity: 'error'
+    });
+    return;
+  }
 
-    if (password.length < 6) {
-      setSnackbar({ open: true, message: 'Password must be at least 6 characters', severity: 'error' });
-      return;
-    }
+  if (password !== confirmPassword) {
+    setSnackbar({ open: true, message: 'Passwords do not match', severity: 'error' });
+    return;
+  }
 
-    setLoading(true);
+  if (password.length < 6) {
+    setSnackbar({ open: true, message: 'Password must be at least 6 characters', severity: 'error' });
+    return;
+  }
 
-    const result = await register(name, email, password);
+  setLoading(true);
 
-    if (result.success) {
-      setSnackbar({ open: true, message: 'Registration successful!', severity: 'success' });
-      navigate('/dashboard');
-    } else {
-      setSnackbar({ open: true, message: result.error || 'Registration failed', severity: 'error' });
-    }
+  const result = await register(name, email, password);
 
-    setLoading(false);
-  };
+  if (result.success) {
+    setSnackbar({
+      open: true,
+      message: result.message || 'Registration successful!',
+      severity: 'success'
+    });
+
+    setTimeout(() => {
+      navigate('/login');
+    }, 1500);
+
+  } else {
+    setSnackbar({
+      open: true,
+      message: result.error || 'User already exists',
+      severity: 'error'
+    });
+  }
+
+  setLoading(false);
+};
+
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -124,7 +153,8 @@ const Register = () => {
                 required
                 fullWidth
               />
-              <Button
+
+              <Button 
                 type="submit"
                 variant="contained"
                 fullWidth
@@ -133,6 +163,7 @@ const Register = () => {
               >
                 {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
+
               <Button
                 type="button"
                 variant="text"
@@ -146,15 +177,18 @@ const Register = () => {
           </form>
         </Paper>
       </Container>
+
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        message={snackbar.message}
-      />
+      >
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
 
 export default Register;
-

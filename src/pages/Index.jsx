@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Button, Container, Box, Typography, Grid, Paper } from '@mui/material';
 import { Shield, Description, People, CheckCircle } from '@mui/icons-material';
-import { Navbar } from '@/components/Navbar';
+import { Navbar } from '../components/Navbar';
 import { useEffect } from 'react';
 
 const Index = () => {

@@ -22,7 +22,7 @@ import {
   Shield,
   Logout,
 } from '@mui/icons-material';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 280;
 

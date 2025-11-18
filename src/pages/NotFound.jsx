@@ -2,7 +2,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Box, Container, Typography, Button } from '@mui/material';
 import { Home } from '@mui/icons-material';
-import { Navbar } from '@/components/Navbar';
+import { Navbar } from '../components/Navbar';
 
 const NotFound = () => {
   const location = useLocation();

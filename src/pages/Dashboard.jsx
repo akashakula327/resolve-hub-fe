@@ -1,6 +1,6 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { useComplaints } from '@/contexts/ComplaintContext';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import { useAuth } from '../contexts/AuthContext';
+import { useComplaints } from '../contexts/ComplaintContext';
+import { DashboardLayout } from '../components/DashboardLayout';
 import {
   Box,
   Grid,
@@ -9,7 +9,7 @@ import {
   CardContent,
 } from '@mui/material';
 import { Description, AccessTime, HourglassEmpty, CheckCircle } from '@mui/icons-material';
-import { StatusBadge } from '@/components/StatusBadge';
+import { StatusBadge } from '../components/StatusBadge';
 
 const Dashboard = () => {
   const { user } = useAuth();

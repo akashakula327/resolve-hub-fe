@@ -22,7 +22,7 @@ import {
   Logout,
   AccountCircle,
 } from '@mui/icons-material';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Navbar = () => {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useComplaints } from '@/contexts/ComplaintContext';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import { useComplaints } from '../contexts/ComplaintContext';
+import { DashboardLayout } from '../components/DashboardLayout';
 import {
   Box,
   Grid,

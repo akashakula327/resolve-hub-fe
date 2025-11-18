@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ComplaintProvider } from './contexts/ComplaintContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import {ProtectedRoute}  from './components/ProtectedRoute';
 import theme from './theme';
 import Index from './pages/Index';
 import Login from './pages/Login';
