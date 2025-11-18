@@ -1,142 +1,125 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from "react";
 
 const ComplaintContext = createContext(undefined);
 
-const initialComplaints = [
-  {
-    id: '1',
-    title: 'Water Supply Issue',
-    description: 'No water supply in the area for the past 2 days',
-    type: 'water',
-    location: 'Main Street, Block A',
-    status: 'in-progress',
-    citizenId: '3',
-    citizenName: 'John Doe',
-    officerId: '2',
-    officerName: 'Officer Smith',
-    statusRemarks: 'Team dispatched to check the main pipeline',
-    createdAt: new Date('2025-01-08'),
-    updatedAt: new Date('2025-01-09'),
-  },
-  {
-    id: '2',
-    title: 'Street Light Not Working',
-    description: 'Multiple street lights on Oak Avenue are not functioning',
-    type: 'electricity',
-    location: 'Oak Avenue, Block B',
-    status: 'pending',
-    citizenId: '3',
-    citizenName: 'John Doe',
-    createdAt: new Date('2025-01-10'),
-    updatedAt: new Date('2025-01-10'),
-  },
-];
-
-const initialOfficers = [
-  { id: '2', name: 'Officer Smith', email: 'officer@cms.gov', assignedComplaints: 1 },
-  { id: '4', name: 'Officer Johnson', email: 'johnson@cms.gov', assignedComplaints: 0 },
-];
-
 export const ComplaintProvider = ({ children }) => {
-  const [complaints, setComplaints] = useState(() => {
-    const stored = localStorage.getItem('cms_complaints');
-    return stored ? JSON.parse(stored).map(c => ({
-      ...c,
-      createdAt: new Date(c.createdAt),
-      updatedAt: new Date(c.updatedAt),
-    })) : initialComplaints;
-  });
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [officers, setOfficers] = useState(() => {
-    const stored = localStorage.getItem('cms_officers');
-    return stored ? JSON.parse(stored) : initialOfficers;
-  });
+  const token = localStorage.getItem("cms_token");
+
+  // ✅ Fetch user's complaints
+  const fetchComplaints = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/complaints/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      // 🔥 Correct backend format handling
+      if (Array.isArray(data)) {
+        setComplaints(data);
+      } else if (Array.isArray(data.complaints)) {
+        setComplaints(data.complaints);
+      } else {
+        setComplaints([]);
+      }
+
+    } catch (err) {
+      console.error("Error fetching complaints:", err);
+      setComplaints([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem('cms_complaints', JSON.stringify(complaints));
-  }, [complaints]);
+    fetchComplaints();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('cms_officers', JSON.stringify(officers));
-  }, [officers]);
+  // ✅ Add complaint (API)
+  const addComplaint = async (complaintData) => {
+    try {
+      const res = await fetch("http://localhost:3000/complaints/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(complaintData),
+      });
 
-  const addComplaint = (complaint) => {
-    const newComplaint = {
-      ...complaint,
-      id: Date.now().toString(),
-      status: 'pending',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setComplaints(prev => [newComplaint, ...prev]);
+      const data = await res.json();
+
+      if (res.ok) {
+        fetchComplaints(); // Refresh list
+        return { success: true, data };
+      }
+
+      return { success: false, error: data.message };
+    } catch (err) {
+      return { success: false, error: "Network error" };
+    }
   };
 
-  const updateComplaintStatus = (id, status, remarks) => {
-    setComplaints(prev =>
-      prev.map(c =>
-        c.id === id
-          ? { ...c, status, statusRemarks: remarks, updatedAt: new Date() }
-          : c
-      )
-    );
+  const updateComplaintStatus = async (id, status, remarks) => {
+    try {
+      const res = await fetch(`http://localhost:3000/complaints/${id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status, remarks }),
+      });
+
+      if (res.ok) fetchComplaints();
+    } catch (err) {
+      console.error("Status update error:", err);
+    }
   };
 
-  const deleteComplaint = (id) => {
-    setComplaints(prev => prev.filter(c => c.id !== id));
+  const deleteComplaint = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:3000/complaints/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) fetchComplaints();
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
   };
 
-  const assignOfficer = (complaintId, officerId) => {
-    const officer = officers.find(o => o.id === officerId);
-    if (!officer) return;
+  const assignOfficer = async (complaintId, officerId) => {
+    try {
+      const res = await fetch("http://localhost:3000/complaints/assign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ complaintId, officerId }),
+      });
 
-    setComplaints(prev =>
-      prev.map(c =>
-        c.id === complaintId
-          ? { ...c, officerId, officerName: officer.name, updatedAt: new Date() }
-          : c
-      )
-    );
-
-    setOfficers(prev =>
-      prev.map(o =>
-        o.id === officerId
-          ? { ...o, assignedComplaints: o.assignedComplaints + 1 }
-          : o
-      )
-    );
-  };
-
-  const addOfficer = (officer) => {
-    const newOfficer = {
-      ...officer,
-      id: Date.now().toString(),
-      assignedComplaints: 0,
-    };
-    setOfficers(prev => [...prev, newOfficer]);
-  };
-
-  const removeOfficer = (id) => {
-    setOfficers(prev => prev.filter(o => o.id !== id));
-    setComplaints(prev =>
-      prev.map(c =>
-        c.officerId === id
-          ? { ...c, officerId: undefined, officerName: undefined, updatedAt: new Date() }
-          : c
-      )
-    );
+      if (res.ok) fetchComplaints();
+    } catch (err) {
+      console.error("Assign officer error:", err);
+    }
   };
 
   return (
     <ComplaintContext.Provider
       value={{
         complaints,
-        officers,
+        loading,
         addComplaint,
         updateComplaintStatus,
         deleteComplaint,
         assignOfficer,
-        addOfficer,
-        removeOfficer,
+        fetchComplaints,
       }}
     >
       {children}
@@ -146,9 +129,7 @@ export const ComplaintProvider = ({ children }) => {
 
 export const useComplaints = () => {
   const context = useContext(ComplaintContext);
-  if (context === undefined) {
-    throw new Error('useComplaints must be used within a ComplaintProvider');
-  }
+  if (!context)
+    throw new Error("useComplaints must be used within a ComplaintProvider");
   return context;
 };
-

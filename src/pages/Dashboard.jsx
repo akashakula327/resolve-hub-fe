@@ -14,21 +14,26 @@ import { StatusBadge } from '../components/StatusBadge';
 const Dashboard = () => {
   const { user } = useAuth();
   const { complaints } = useComplaints();
+  console.log("USER:", user);
+console.log("COMPLAINTS:", complaints);
 
-  const userComplaints = user?.role === 'citizen'
-    ? complaints.filter(c => c.citizenId === user.id)
-    : user?.role === 'officer'
-    ? complaints.filter(c => c.officerId === user.id)
-    : complaints;
+
+  // 🔥 Filter complaints based on user role & backend fields
+  const userComplaints =
+    user?.role === "citizen"
+      ? complaints.filter(c => c.user_id === user.id)
+      : user?.role === "officer"
+      ? complaints.filter(c => c.assigned_officer_id === user.id)
+      : complaints; // admin sees all
 
   const stats = {
     total: userComplaints.length,
-    pending: userComplaints.filter(c => c.status === 'pending').length,
-    inProgress: userComplaints.filter(c => c.status === 'in-progress').length,
-    resolved: userComplaints.filter(c => c.status === 'resolved').length,
+    pending: userComplaints.filter(c => c.status === "pending").length,
+    inProgress: userComplaints.filter(c => c.status === "in-progress").length,
+    resolved: userComplaints.filter(c => c.status === "resolved").length,
   };
 
-  const StatCard = ({ title, value, icon, color }) => (
+  const StatCard = ({ title, value, icon }) => (
     <Card>
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -47,6 +52,8 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        
+        {/* Welcome Header */}
         <Box>
           <Typography variant="h4" fontWeight={700} gutterBottom>
             Welcome back, {user?.name}!
@@ -58,6 +65,7 @@ const Dashboard = () => {
           </Typography>
         </Box>
 
+        {/* Stats */}
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
@@ -66,6 +74,7 @@ const Dashboard = () => {
               icon={<Description sx={{ color: 'text.secondary' }} />}
             />
           </Grid>
+
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="Pending"
@@ -73,6 +82,7 @@ const Dashboard = () => {
               icon={<AccessTime sx={{ color: 'warning.main' }} />}
             />
           </Grid>
+
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="In Progress"
@@ -80,6 +90,7 @@ const Dashboard = () => {
               icon={<HourglassEmpty sx={{ color: 'primary.main' }} />}
             />
           </Grid>
+
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="Resolved"
@@ -89,11 +100,13 @@ const Dashboard = () => {
           </Grid>
         </Grid>
 
+        {/* Recent Complaints */}
         <Card>
           <CardContent>
             <Typography variant="h6" fontWeight={600} gutterBottom>
               Recent Complaints
             </Typography>
+
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
               {userComplaints.slice(0, 5).map(complaint => (
                 <Box
@@ -112,18 +125,29 @@ const Dashboard = () => {
                     <Typography variant="body1" fontWeight={500}>
                       {complaint.title}
                     </Typography>
+
                     <Typography variant="body2" color="text.secondary">
-                      {complaint.location}
+                      {complaint.location || "Unknown Location"}
                     </Typography>
+
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(complaint.createdAt).toLocaleDateString()}
+                      {complaint.created_at
+                        ? new Date(complaint.created_at).toLocaleDateString()
+                        : ""}
                     </Typography>
                   </Box>
-                  <StatusBadge status={complaint.status} />
+
+                  <StatusBadge status={complaint.status || "pending"} />
                 </Box>
               ))}
+
               {userComplaints.length === 0 && (
-                <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ py: 4 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                  sx={{ py: 4 }}
+                >
                   No complaints found
                 </Typography>
               )}
@@ -136,4 +160,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
