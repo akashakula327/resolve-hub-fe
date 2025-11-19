@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useComplaints } from '../contexts/ComplaintContext';
 import { DashboardLayout } from '../components/DashboardLayout';
@@ -13,9 +14,16 @@ import { StatusBadge } from '../components/StatusBadge';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { complaints } = useComplaints();
+  const { complaints, fetchComplaints } = useComplaints();
   console.log("USER:", user);
-console.log("COMPLAINTS:", complaints);
+  console.log("COMPLAINTS:", complaints);
+
+  // Refetch complaints when dashboard mounts and user is available
+  useEffect(() => {
+    if (user) {
+      fetchComplaints();
+    }
+  }, [user, fetchComplaints]);
 
 
   // 🔥 Filter complaints based on user role & backend fields

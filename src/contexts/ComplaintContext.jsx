@@ -1,46 +1,266 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 const ComplaintContext = createContext(undefined);
 
+// Initial mock data for fallback/demo purposes
+const initialComplaints = [
+  {
+    id: '1',
+    title: 'Water Supply Issue',
+    description: 'No water supply in the area for the past 2 days',
+    type: 'water',
+    category: 'water',
+    location: 'Main Street, Block A',
+    status: 'in-progress',
+    user_id: '3',
+    citizenId: '3',
+    citizenName: 'John Doe',
+    assigned_officer_id: '2',
+    officerId: '2',
+    officerName: 'Officer Smith',
+    statusRemarks: 'Team dispatched to check the main pipeline',
+    created_at: new Date('2025-01-08').toISOString(),
+    updatedAt: new Date('2025-01-09').toISOString(),
+  },
+  {
+    id: '2',
+    title: 'Street Light Not Working',
+    description: 'Multiple street lights on Oak Avenue are not functioning',
+    type: 'electricity',
+    category: 'electricity',
+    location: 'Oak Avenue, Block B',
+    status: 'pending',
+    user_id: '3',
+    citizenId: '3',
+    citizenName: 'John Doe',
+    created_at: new Date('2025-01-10').toISOString(),
+    updatedAt: new Date('2025-01-10').toISOString(),
+  },
+];
+
+const initialOfficers = [
+  { id: '2', name: 'Officer Smith', email: 'officer@cms.gov', assignedComplaints: 1 },
+  { id: '4', name: 'Officer Johnson', email: 'johnson@cms.gov', assignedComplaints: 0 },
+];
+
 export const ComplaintProvider = ({ children }) => {
-  const [complaints, setComplaints] = useState([]);
+  // Initialize complaints from localStorage or use empty array (API will populate)
+  const [complaints, setComplaints] = useState(() => {
+    const stored = localStorage.getItem('cms_complaints');
+    if (stored) {
+      try {
+        return JSON.parse(stored).map(c => ({
+          ...c,
+          created_at: c.created_at || c.createdAt,
+          updatedAt: c.updatedAt || c.updated_at,
+        }));
+      } catch (e) {
+        console.error('Error parsing stored complaints:', e);
+        return [];
+      }
+    }
+    return [];
+  });
+
+  // Initialize officers from localStorage or use initial mock data
+  const [officers, setOfficers] = useState(() => {
+    const stored = localStorage.getItem('cms_officers');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error('Error parsing stored officers:', e);
+        return initialOfficers;
+      }
+    }
+    return initialOfficers;
+  });
+
   const [loading, setLoading] = useState(true);
 
-  const token = localStorage.getItem("cms_token");
+  // Helper function to get token dynamically
+  const getToken = () => {
+    return localStorage.getItem("cms_token");
+  };
 
-  // ✅ Fetch user's complaints
-  const fetchComplaints = async () => {
+  // Helper function to get user from localStorage
+  const getUser = () => {
+    const userStr = localStorage.getItem("cms_user");
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch (e) {
+        console.error("Error parsing user:", e);
+        return null;
+      }
+    }
+    return null;
+  };
+
+  // ✅ Fetch user's complaints based on role
+  const fetchComplaints = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      console.error("No token found. Please login again.");
+      setLoading(false);
+      return;
+    }
+
+    const user = getUser();
+    if (!user) {
+      console.error("No user found. Please login again.");
+      setLoading(false);
+      return;
+    }
+
+    // Determine the correct endpoint based on user role
+    let endpoint = "";
+    if (user.role === "admin") {
+      endpoint = "http://localhost:3000/admin/complaints";
+    } else if (user.role === "officer") {
+      endpoint = "http://localhost:3000/officer/complaints";
+    } else if (user.role === "citizen") {
+      endpoint = "http://localhost:3000/complaints/my";
+    } else {
+      console.error("Unknown user role:", user.role);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch("http://localhost:3000/complaints/my", {
+      const res = await fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      // Check if response is ok
+      if (!res.ok) {
+        const errorText = await res.text();
+        let errorMessage = `Failed to fetch complaints (${res.status})`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = res.statusText || errorMessage;
+        }
+        console.error("Error response:", errorMessage);
+        setComplaints([]);
+        setLoading(false);
+        return;
+      }
 
       const data = await res.json();
 
       // 🔥 Correct backend format handling
+      let fetchedComplaints = [];
       if (Array.isArray(data)) {
-        setComplaints(data);
+        fetchedComplaints = data;
       } else if (Array.isArray(data.complaints)) {
-        setComplaints(data.complaints);
+        fetchedComplaints = data.complaints;
+      } else if (data.data && Array.isArray(data.data)) {
+        fetchedComplaints = data.data;
       } else {
-        setComplaints([]);
+        console.warn("Unexpected response format:", data);
+        fetchedComplaints = [];
       }
+
+      setComplaints(fetchedComplaints);
+      // Save to localStorage as backup
+      localStorage.setItem('cms_complaints', JSON.stringify(fetchedComplaints));
 
     } catch (err) {
       console.error("Error fetching complaints:", err);
-      setComplaints([]);
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        console.error("Cannot connect to server. Make sure backend is running.");
+        // Fallback to localStorage if API fails
+        const stored = localStorage.getItem('cms_complaints');
+        if (stored) {
+          try {
+            const storedComplaints = JSON.parse(stored);
+            if (Array.isArray(storedComplaints) && storedComplaints.length > 0) {
+              setComplaints(storedComplaints);
+              console.log("Loaded complaints from localStorage as fallback");
+            } else {
+              setComplaints([]);
+            }
+          } catch (e) {
+            console.error("Error parsing stored complaints:", e);
+            setComplaints([]);
+          }
+        } else {
+          setComplaints([]);
+        }
+      } else {
+        setComplaints([]);
+      }
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchComplaints();
   }, []);
 
-  // ✅ Add complaint (API)
+  // Initial fetch on mount if user is logged in
+  useEffect(() => {
+    const token = getToken();
+    const user = getUser();
+    
+    // Only fetch if we have both token and user
+    if (token && user) {
+      fetchComplaints();
+    } else {
+      // If no token/user, clear complaints and set loading to false
+      setComplaints([]);
+      setLoading(false);
+    }
+  }, [fetchComplaints]);
+
+  // Listen for storage changes (when user logs in/out in other tabs)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'cms_token' || e.key === 'cms_user') {
+        const token = getToken();
+        const user = getUser();
+        
+        if (token && user) {
+          // User logged in or token updated, refetch complaints
+          fetchComplaints();
+        } else {
+          // User logged out, clear complaints
+          setComplaints([]);
+          setLoading(false);
+        }
+      }
+    };
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [fetchComplaints]);
+
+  // ✅ Add complaint (works locally immediately, then syncs with API)
   const addComplaint = async (complaintData) => {
-    console.log(complaintData);
+    const user = getUser();
+    const newComplaint = {
+      ...complaintData,
+      id: Date.now().toString(),
+      status: 'pending',
+      user_id: user?.id,
+      citizenId: user?.id,
+      citizenName: user?.name,
+      created_at: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Add to local state immediately for instant UI update
+    setComplaints(prev => [newComplaint, ...prev]);
+
+    const token = getToken();
+    if (!token) {
+      return { success: true, data: newComplaint, message: "Saved locally (not logged in)" };
+    }
+
+    // Try to sync with API in background
     try {
       const res = await fetch("http://localhost:3000/complaints/submit", {
         method: "POST",
@@ -54,49 +274,135 @@ export const ComplaintProvider = ({ children }) => {
       const data = await res.json();
 
       if (res.ok) {
-        fetchComplaints(); // Refresh list
+        // Update with server response (may have different ID)
+        setComplaints(prev => prev.map(c => 
+          c.id === newComplaint.id ? { ...data, id: data.id || newComplaint.id } : c
+        ));
         return { success: true, data };
       }
 
-      return { success: false, error: data.message };
+      // API failed but already saved locally
+      return { success: true, data: newComplaint, message: "Saved locally (API error: " + (data.message || "Unknown") + ")" };
     } catch (err) {
-      return { success: false, error: "Network error" };
+      // API failed but already saved locally
+      return { success: true, data: newComplaint, message: "Saved locally (Network error)" };
     }
   };
 
   const updateComplaintStatus = async (id, status, remarks) => {
+    const user = getUser();
+    if (!user) {
+      console.error("No user found. Please login again.");
+      return;
+    }
+
+    // Update locally immediately for instant UI update
+    setComplaints(prev => prev.map(c => 
+      c.id === id || c.id?.toString() === id?.toString()
+        ? { ...c, status, statusRemarks: remarks, updatedAt: new Date().toISOString() }
+        : c
+    ));
+
+    const token = getToken();
+    if (!token) {
+      console.warn("No token - updated locally only");
+      return;
+    }
+
+    // Try to sync with API in background
     try {
-      const res = await fetch(`http://localhost:3000/complaints/${id}/status`, {
-        method: "PUT",
+      // Officers use /officer/update-status endpoint
+      const endpoint = user.role === "officer" 
+        ? "http://localhost:3000/officer/update-status"
+        : `http://localhost:3000/complaints/${id}/status`;
+      
+      const method = user.role === "officer" ? "POST" : "PUT";
+      
+      const body = user.role === "officer"
+        ? JSON.stringify({ complaintId: id, status, remarks })
+        : JSON.stringify({ status, remarks });
+
+      const res = await fetch(endpoint, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status, remarks }),
+        body: body,
       });
 
-      if (res.ok) fetchComplaints();
+      if (res.ok) {
+        // Refresh from API to get latest state
+        fetchComplaints();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Status update error:", errorData.message || "Failed to update status");
+        // Already updated locally, so user sees the change
+      }
     } catch (err) {
       console.error("Status update error:", err);
+      // Already updated locally, so user sees the change
     }
   };
 
   const deleteComplaint = async (id) => {
+    // Delete locally immediately for instant UI update
+    setComplaints(prev => prev.filter(c => c.id !== id && c.id?.toString() !== id?.toString()));
+
+    const token = getToken();
+    if (!token) {
+      console.warn("No token - deleted locally only");
+      return;
+    }
+
+    // Try to sync with API in background
     try {
-      const res = await fetch(`http://localhost:3000/complaints/${id}`, {
+      // Delete is only available for admin via /admin/complaints/:id
+      const res = await fetch(`http://localhost:3000/admin/complaints/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (res.ok) fetchComplaints();
+      if (res.ok) {
+        // Refresh from API to get latest state
+        fetchComplaints();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Delete error:", errorData.message || "Failed to delete complaint");
+        // Already deleted locally, so user sees the change
+      }
     } catch (err) {
       console.error("Delete error:", err);
+      // Already deleted locally, so user sees the change
     }
   };
 
   const assignOfficer = async (complaintId, officerId) => {
+    const officer = officers.find(o => o.id === officerId);
+    if (!officer) {
+      console.error("Officer not found");
+      return;
+    }
+
+    // Update locally immediately for instant UI update
+    setComplaints(prev => prev.map(c => 
+      c.id === complaintId || c.id?.toString() === complaintId?.toString()
+        ? { ...c, assigned_officer_id: officerId, officerId, officerName: officer.name, updatedAt: new Date().toISOString() }
+        : c
+    ));
+    setOfficers(prev => prev.map(o => 
+      o.id === officerId ? { ...o, assignedComplaints: (o.assignedComplaints || 0) + 1 } : o
+    ));
+
+    const token = getToken();
+    if (!token) {
+      console.warn("No token - assigned locally only");
+      return;
+    }
+
+    // Try to sync with API in background
     try {
-      const res = await fetch("http://localhost:3000/complaints/assign", {
+      const res = await fetch("http://localhost:3000/admin/assign", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -105,21 +411,71 @@ export const ComplaintProvider = ({ children }) => {
         body: JSON.stringify({ complaintId, officerId }),
       });
 
-      if (res.ok) fetchComplaints();
+      if (res.ok) {
+        // Refresh from API to get latest state
+        fetchComplaints();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Assign officer error:", errorData.message || "Failed to assign officer");
+        // Already updated locally, so user sees the change
+      }
     } catch (err) {
       console.error("Assign officer error:", err);
+      // Already updated locally, so user sees the change
     }
   };
+
+  // Officer management functions (for admin)
+  const addOfficer = (officer) => {
+    const newOfficer = {
+      ...officer,
+      id: officer.id || Date.now().toString(),
+      assignedComplaints: 0,
+    };
+    setOfficers(prev => {
+      const updated = [...prev, newOfficer];
+      localStorage.setItem('cms_officers', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const removeOfficer = (id) => {
+    setOfficers(prev => {
+      const updated = prev.filter(o => o.id !== id);
+      localStorage.setItem('cms_officers', JSON.stringify(updated));
+      return updated;
+    });
+    setComplaints(prev => prev.map(c => 
+      c.assigned_officer_id === id || c.officerId === id
+        ? { ...c, assigned_officer_id: undefined, officerId: undefined, officerName: undefined, updatedAt: new Date().toISOString() }
+        : c
+    ));
+  };
+
+  // Persist complaints to localStorage whenever they change
+  useEffect(() => {
+    if (complaints.length > 0) {
+      localStorage.setItem('cms_complaints', JSON.stringify(complaints));
+    }
+  }, [complaints]);
+
+  // Persist officers to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('cms_officers', JSON.stringify(officers));
+  }, [officers]);
 
   return (
     <ComplaintContext.Provider
       value={{
         complaints,
+        officers,
         loading,
         addComplaint,
         updateComplaintStatus,
         deleteComplaint,
         assignOfficer,
+        addOfficer,
+        removeOfficer,
         fetchComplaints,
       }}
     >
@@ -134,3 +490,4 @@ export const useComplaints = () => {
     throw new Error("useComplaints must be used within a ComplaintProvider");
   return context;
 };
+
